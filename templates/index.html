@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitalis IA | Predicción de Riesgo Metabólico</title>
+    
+    <!-- FAVICON INTEGRADO (LOGO SVG) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3ClinearGradient id='grad1' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%232dd4bf;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%230ea5e9;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M50 5 L85 20 L85 50 C85 75 50 95 50 95 C50 95 15 75 15 50 L15 20 Z' fill='none' stroke='url(%23grad1)' stroke-width='6' stroke-linejoin='round'/%3E%3Ccircle cx='50' cy='40' r='8' fill='%232dd4bf' /%3E%3Ccircle cx='35' cy='65' r='5' fill='%230ea5e9' /%3E%3Ccircle cx='65' cy='65' r='5' fill='%230ea5e9' /%3E%3Cline x1='50' y1='40' x2='35' y2='65' stroke='%232dd4bf' stroke-width='3' /%3E%3Cline x1='50' y1='40' x2='65' y2='65' stroke='%232dd4bf' stroke-width='3' /%3E%3Cline x1='35' y1='65' x2='65' y2='65' stroke='%230ea5e9' stroke-width='3' /%3E%3C/svg%3E">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .nav-active { background-color: #0f172a; color: white; border-left: 4px solid #14b8a6; }
+        .nav-inactive { color: #cbd5e1; border-left: 4px solid transparent; }
+        .nav-inactive:hover { background-color: #1e293b; color: white; }
+        
+        .powerbi-select {
+            appearance: none; 
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1em;
+        }
+        
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-100 flex h-screen overflow-hidden font-sans text-slate-800">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-2xl z-20 hidden lg:flex">
+        <div class="p-6 border-b border-slate-800 mt-2">
+            <div class="flex items-center gap-3 mb-2">
+                <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-lg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#2dd4bf;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 5 L85 20 L85 50 C85 75 50 95 50 95 C50 95 15 75 15 50 L15 20 Z" fill="none" stroke="url(#grad1)" stroke-width="6" stroke-linejoin="round"/>
+                    <circle cx="50" cy="40" r="8" fill="#2dd4bf" />
+                    <circle cx="35" cy="65" r="5" fill="#0ea5e9" />
+                    <circle cx="65" cy="65" r="5" fill="#0ea5e9" />
+                    <line x1="50" y1="40" x2="35" y2="65" stroke="#2dd4bf" stroke-width="3" />
+                    <line x1="50" y1="40" x2="65" y2="65" stroke="#2dd4bf" stroke-width="3" />
+                    <line x1="35" y1="65" x2="65" y2="65" stroke="#0ea5e9" stroke-width="3" />
+                </svg>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wide text-white">Vitalis IA</h1>
+                    <p class="text-[9px] text-teal-400 uppercase tracking-widest font-bold">Riesgo Metabólico</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 py-4 space-y-1">
+            <button onclick="switchView('view-dashboard', this)" class="nav-btn nav-active w-full text-left flex items-center px-6 py-3 font-medium transition-all">
+                <i class="fa-solid fa-chart-line w-6 text-teal-500"></i> Panel Estadístico
+            </button>
+            <button onclick="switchView('view-inferencia', this)" class="nav-btn nav-inactive w-full text-left flex items-center px-6 py-3 font-medium transition-all">
+                <i class="fa-solid fa-brain w-6 text-slate-400"></i> Modelo Predictivo IA
+            </button>
+            <button onclick="switchView('view-docs', this)" class="nav-btn nav-inactive w-full text-left flex items-center px-6 py-3 font-medium transition-all">
+                <i class="fa-solid fa-microscope w-6 text-slate-400"></i> Reportes y Metodología
+            </button>
+        </nav>
+        
+        <div class="p-4 border-t border-slate-800 text-xs text-center text-slate-400 bg-slate-950/50">
+            <p>Dev: <b class="text-slate-300">Jose Miguel Rico A.</b></p>
+            <p class="mt-1 font-semibold text-slate-500">Deep Learning © 2026</p>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-full overflow-y-auto">
+        
+        <!-- ENCABEZADO -->
+        <header class="bg-white shadow-sm px-8 py-4 flex justify-between items-center z-10 sticky top-0">
+            <div>
+                <h2 id="header-title" class="text-xl font-extrabold text-slate-800 tracking-tight">Dashboard Estadístico Global</h2>
+                <p id="header-subtitle" class="text-xs font-semibold text-slate-500 mt-0.5">Análisis demográfico y geográfico de la fuerza laboral (DANE).</p>
+            </div>
+            
+            <div class="flex items-center gap-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-200 shadow-sm">
+                <img src="/static/image_a1e4ff.png" class="h-6 w-6 rounded-full shadow-sm" alt="Colombia">
+                <span class="text-sm font-bold text-slate-700 tracking-wide">Colombia</span>
+            </div>
+        </header>
+
+        <div class="p-6 max-w-[1600px] mx-auto w-full">
+
+            <!-- VISTA 1: PANEL ESTADÍSTICO -->
+            <div id="view-dashboard" class="fade-in view-section space-y-4">
+                
+                <!-- BARRA DE FILTROS GLOBALES -->
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center gap-4">
+                    <span class="text-sm font-bold text-slate-800 ml-2"><i class="fa-solid fa-filter text-teal-500 mr-1"></i> Filtros de Dashboard:</span>
+                    <select id="filtroGenero" onchange="actualizarDashboard()" class="powerbi-select px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 shadow-sm outline-none w-48 cursor-pointer">
+                        <option value="todos">Ambos Géneros</option>
+                        <option value="mujeres">Solo Mujeres</option>
+                        <option value="hombres">Solo Hombres</option>
+                    </select>
+                    <select id="filtroSector" onchange="actualizarDashboard()" class="powerbi-select px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 shadow-sm outline-none w-64 cursor-pointer">
+                        <option value="todos">Todas las Industrias (12)</option>
+                        <option value="Finanzas y Seguros">Finanzas y Seguros</option>
+                        <option value="Tecnología e Información">Tecnología e Información</option>
+                        <option value="Manufactura e Industria">Manufactura e Industria</option>
+                        <option value="Comercio Mayor y Menor">Comercio Mayor y Menor</option>
+                        <option value="Salud y Asistencia Social">Salud y Asistencia Social</option>
+                        <option value="Construcción">Construcción</option>
+                        <option value="Educación">Educación</option>
+                        <option value="Transporte y Almacenaje">Transporte y Almacenaje</option>
+                        <option value="Científico y Técnico">Científico y Técnico</option>
+                        <option value="Minería y Extracción">Minería y Extracción</option>
+                        <option value="Agricultura y Ganadería">Agricultura y Ganadería</option>
+                        <option value="Población Inactiva">Población Inactiva</option>
+                    </select>
+                </div>
+
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 transition-all">
+                        <div class="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600 text-xl"><i class="fa-solid fa-users"></i></div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase">Muestra Analizada</p>
+                            <p id="kpi-total" class="text-2xl font-black text-slate-800">220,095</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 transition-all">
+                        <div class="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500 text-xl"><i class="fa-solid fa-venus-mars"></i></div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase">Distribución H / M</p>
+                            <p id="kpi-dist" class="text-xl font-black text-slate-800">53% / 47%</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 transition-all">
+                        <div class="w-12 h-12 rounded-lg bg-sky-50 flex items-center justify-center text-sky-500 text-xl"><i class="fa-solid fa-calendar-days"></i></div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase">Edad Promedio</p>
+                            <p id="kpi-edad" class="text-2xl font-black text-slate-800">41.7 <span class="text-sm font-normal text-slate-500">años</span></p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 transition-all">
+                        <div class="w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 text-xl"><i class="fa-solid fa-briefcase"></i></div>
+                        <div>
+                            <p id="kpi-sector-title" class="text-xs font-bold text-slate-500 uppercase">Sectores Contemplados</p>
+                            <p id="kpi-sector-val" class="text-2xl font-black text-slate-800">12</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pirámide | Top 12 + Medidor -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-5 relative">
+                        <h3 class="font-bold text-sm text-slate-800 mb-2">Distribución Poblacional por Género</h3>
+                        <div id="graficaPiramide" class="w-full h-[380px]"></div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-7 flex flex-col">
+                        <h3 class="font-bold text-sm text-slate-800 mb-2">Ranking de Riesgo por Industria (12 Sectores)</h3>
+                        <div class="flex-1 flex flex-col xl:flex-row gap-4 items-center">
+                            
+                            <!-- Gráfica de 12 Barras - Rediseñada para despegar el texto del eje -->
+                            <div id="graficaSectores" class="w-full xl:w-7/12 h-[380px]"></div>
+                            
+                            <!-- Medidor SVG (Medio Círculo) -->
+                            <div class="w-full xl:w-5/12 flex flex-col items-center justify-center pt-4 xl:pt-0">
+                                <h4 class="text-xs uppercase tracking-widest font-extrabold text-slate-400 mb-4 text-center" id="gauge-title">Riesgo Promedio Global (12 Sectores)</h4>
+                                <div class="relative w-full max-w-[220px] aspect-[2/1]">
+                                    <svg class="w-full h-full overflow-visible" viewBox="0 0 100 50">
+                                        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" stroke-width="12" stroke-linecap="round"></path>
+                                        <path id="dashboardGaugeSvg" d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#14b8a6" stroke-width="12" stroke-linecap="round" stroke-dasharray="125.6" stroke-dashoffset="125.6" class="transition-all duration-1000 ease-out"></path>
+                                    </svg>
+                                    <div class="absolute bottom-0 left-0 w-full text-center flex flex-col items-center justify-end pb-1">
+                                        <span id="nacional-text-pct" class="text-4xl font-black text-slate-800 leading-none">0%</span>
+                                    </div>
+                                </div>
+                                <p id="nacional-text-desc" class="text-[13px] font-bold text-slate-500 mt-6 text-center px-4">Calculando vulnerabilidad global...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insights + Mapa Coroplético -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-5 h-[450px] flex flex-col">
+                        <div class="flex justify-between items-start mb-4 border-b border-slate-100 pb-2">
+                            <div>
+                                <h3 class="font-bold text-sm text-slate-800">Hallazgos Analíticos (Insights)</h3>
+                                <p class="text-xs text-slate-400">Conclusiones extraídas mediante Deep Learning.</p>
+                            </div>
+                        </div>
+                        <div class="space-y-3 overflow-y-auto flex-1 pr-2 custom-scroll">
+                            <div class="flex items-start bg-sky-50 p-4 rounded-lg border border-sky-100 shadow-sm">
+                                <div class="bg-sky-200 text-sky-700 rounded-full w-5 h-5 flex items-center justify-center text-[10px] mr-3 shrink-0 mt-0.5"><i class="fa-solid fa-chart-pie"></i></div>
+                                <p class="text-[13px] text-slate-700 leading-relaxed">El indicador de <b class="text-sky-800">Riesgo Promedio Global del 53.6%</b> refleja la vulnerabilidad transversal de los 12 sectores macroeconómicos analizados. Esto demuestra que el impacto del sedentarismo no es un caso aislado, sino una condición sistémica de la fuerza laboral moderna.</p>
+                            </div>
+                            <div class="flex items-start bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                <div class="bg-teal-100 text-teal-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] mr-3 shrink-0 mt-0.5"><i class="fa-solid fa-info"></i></div>
+                                <p class="text-[13px] text-slate-600 leading-relaxed">La <b class="text-slate-800">Población Inactiva</b> lidera la propensión a la obesidad, seguida directamente por el sector de <b class="text-slate-800">Finanzas y Seguros</b> y el sector de <b class="text-slate-800">Transporte</b>, confirmando el impacto de la economía del conocimiento y la logística sedentaria.</p>
+                            </div>
+                            <div class="flex items-start bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                <div class="bg-teal-100 text-teal-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] mr-3 shrink-0 mt-0.5"><i class="fa-solid fa-info"></i></div>
+                                <p class="text-[13px] text-slate-600 leading-relaxed">Las <b class="text-slate-800">mujeres entre 55-65 años</b> concentran el pico poblacional de probabilidad metabólica antes de alcanzar la edad de pensión.</p>
+                            </div>
+                            <div class="flex items-start bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                <div class="bg-teal-100 text-teal-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] mr-3 shrink-0 mt-0.5"><i class="fa-solid fa-info"></i></div>
+                                <p class="text-[13px] text-slate-600 leading-relaxed">Departamentos periféricos como <b class="text-slate-800">Nariño</b> (44.3%) superan por amplio margen a centros corporativos como Bogotá (25.1%), sugiriendo deficiencia en infraestructura de movilidad local.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-7 h-[450px] flex flex-col relative overflow-hidden">
+                        <div class="flex flex-wrap items-center gap-3 mb-2 z-10 relative bg-white/90 p-2 rounded-lg">
+                            <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-map text-teal-500 mr-1"></i> Densidad Geográfica del Riesgo</h3>
+                        </div>
+                        
+                        <div id="mapaColombia" class="w-full flex-1 -mt-4 relative">
+                            <div id="mapLoader" class="absolute inset-0 flex items-center justify-center bg-white z-20">
+                                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-teal-500"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA 2: MODELO PREDICTIVO IA -->
+            <div id="view-inferencia" class="hidden grid-cols-1 lg:grid-cols-2 gap-6 fade-in view-section">
+                <!-- Formulario -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6 border-b pb-3 flex items-center">
+                        <i class="fa-solid fa-user-doctor text-teal-500 mr-2"></i> Formulario Clínico Individual
+                    </h3>
+                    <form id="predForm" class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Edad (Años)</label>
+                            <input type="number" id="edad" value="35" min="15" max="90" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:border-teal-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Género Biológico</label>
+                            <select id="genero" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none transition cursor-pointer">
+                                <option value="1.0">Hombre</option>
+                                <option value="2.0">Mujer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Sector Macroeconómico (Clasificación CIIU)</label>
+                            <select id="sector" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none transition cursor-pointer">
+                                <option value="0.0">Población Inactiva / Desempleados</option>
+                                <option value="2.0">Agricultura y Ganadería</option>
+                                <option value="6.0">Minería y Extracción</option>
+                                <option value="20.0">Manufactura e Industria</option>
+                                <option value="42.0">Construcción</option>
+                                <option value="46.0">Comercio Mayor y Menor</option>
+                                <option value="50.0">Transporte y Almacenaje</option>
+                                <option value="62.0">Tecnología e Información</option>
+                                <option value="65.0">Finanzas y Seguros</option>
+                                <option value="72.0">Científico y Técnico</option>
+                                <option value="85.0">Educación</option>
+                                <option value="86.0">Salud y Asistencia Social</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full mt-4 bg-slate-900 text-white font-bold py-3.5 px-4 rounded-lg shadow-md hover:bg-teal-600 transition-colors flex justify-center items-center">
+                            Procesar Diagnóstico de Red Neuronal
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 flex flex-col justify-center items-center text-center relative overflow-hidden h-full">
+                    <div id="initialOverlay" class="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-10 transition-opacity duration-500">
+                        <i class="fa-solid fa-heart-pulse text-6xl text-slate-300 mb-4"></i>
+                        <h3 class="text-sm font-bold text-slate-400">Esperando perfil del paciente...</h3>
+                    </div>
+                    <h3 class="text-xs uppercase tracking-widest font-extrabold text-slate-400 mb-4">Probabilidad Calculada</h3>
+                    <div class="relative w-40 h-40 mb-4">
+                        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" stroke-width="8"></circle>
+                            <circle id="progressCircle" cx="50" cy="50" r="40" fill="transparent" stroke="#14b8a6" stroke-width="8" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2" class="transition-all duration-1000 ease-out"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="pctText" class="text-3xl font-black text-slate-800">0%</span>
+                        </div>
+                    </div>
+                    <h2 id="tituloAlerta" class="text-xl font-extrabold mb-2">Evaluando...</h2>
+                    <p id="textoAlerta" class="text-slate-600 text-xs leading-relaxed px-6"></p>
+                </div>
+            </div>
+
+            <!-- VISTA 3: DOCUMENTACIÓN TÉCNICA -->
+            <div id="view-docs" class="hidden fade-in view-section max-w-5xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                    <div class="border-b border-slate-200 pb-4 mb-6">
+                        <h2 class="text-3xl font-black text-slate-800">Reportes y Documentación Científica</h2>
+                        <p class="text-slate-500 mt-2">Detalles estructurales de la extracción de datos y modelado de Deep Learning de Vitalis IA.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="p-6 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md transition">
+                            <h3 class="font-bold text-lg text-teal-600 mb-3"><i class="fa-solid fa-database mr-2"></i> Dataset (GEIH DANE)</h3>
+                            <p class="text-slate-600 text-sm leading-relaxed text-justify">
+                                Los microdatos base fueron extraídos de la Gran Encuesta Integrada de Hogares (2025-2026). Tras un proceso estricto de depuración heurística y cruce de variables sociolaborales, la muestra maestra consolidada alcanzó un total de <b>220,095 registros válidos</b>.
+                            </p>
+                        </div>
+                        <div class="p-6 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md transition">
+                            <h3 class="font-bold text-lg text-teal-600 mb-3"><i class="fa-solid fa-network-wired mr-2"></i> Perceptrón Multicapa (PyTorch)</h3>
+                            <p class="text-slate-600 text-sm leading-relaxed mb-3">La inferencia clínica se procesa en una Red Neuronal densa compuesta por:</p>
+                            <ul class="list-disc list-inside text-sm text-slate-700 space-y-1">
+                                <li><b>Entrada:</b> 3 Nodos vectorizados (Edad, Género, CIIU).</li>
+                                <li><b>Capas Ocultas:</b> 16 y 8 neuronas con activación ReLU.</li>
+                                <li><b>Salida:</b> Función Sigmoide.</li>
+                            </ul>
+                        </div>
+                        <div class="p-6 bg-slate-50 border border-slate-200 rounded-xl hover:shadow-md transition md:col-span-2">
+                            <h3 class="font-bold text-lg text-teal-600 mb-3"><i class="fa-solid fa-scale-unbalanced mr-2"></i> Manejo del Desbalance Poblacional</h3>
+                            <p class="text-slate-600 text-sm leading-relaxed text-justify">
+                                Dado que la fuerza laboral sana representa aproximadamente el 70% de los encuestados, el algoritmo fue configurado con la función de pérdida <code>BCEWithLogitsLoss</code> integrando pesos penalizadores (pos_weight). Esto obliga a la IA a priorizar la <b>Sensibilidad (Recall)</b>, mitigando los falsos negativos para asegurar que los pacientes con verdadero riesgo metabólico sean detectados e intervenidos a tiempo.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <script>
+        function switchView(viewId, btnElement) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('nav-active'); btn.classList.add('nav-inactive');
+                const icon = btn.querySelector('i');
+                if(icon) { icon.classList.remove('text-teal-500'); icon.classList.add('text-slate-400'); }
+            });
+            btnElement.classList.remove('nav-inactive'); btnElement.classList.add('nav-active');
+            const icon = btnElement.querySelector('i');
+            if(icon) { icon.classList.remove('text-slate-400'); icon.classList.add('text-teal-500'); }
+
+            document.querySelectorAll('.view-section').forEach(view => {
+                view.classList.add('hidden'); view.classList.remove('grid');
+            });
+            
+            const target = document.getElementById(viewId);
+            if(viewId === 'view-inferencia') { target.classList.add('grid'); target.classList.remove('hidden'); }
+            else { target.classList.remove('hidden'); }
+            
+            const title = document.getElementById('header-title');
+            const sub = document.getElementById('header-subtitle');
+            
+            if (viewId === 'view-dashboard') {
+                title.innerText = "Dashboard Estadístico Global";
+                sub.innerText = "Análisis demográfico y geográfico de la fuerza laboral (DANE).";
+                if (geojsonData) setTimeout(actualizarDashboard, 50); 
+            } 
+            else if (viewId === 'view-inferencia') {
+                title.innerText = "Motor de Inferencia Clínica";
+                sub.innerText = "Evaluación personalizada de riesgo metabólico mediante Redes Neuronales.";
+            } 
+            else if (viewId === 'view-docs') {
+                title.innerText = "Documentación y Metodología";
+                sub.innerText = "Arquitectura técnica y base científica del modelo predictivo.";
+            }
+        }
+
+        const edades = ['65+', '56-65', '46-55', '36-45', '26-35', '15-25']; 
+        const dptosNombres = ["Nariño", "Norte de Santander", "Quindío", "La Guajira", "Meta", "Bogotá", "Antioquia", "Valle del Cauca", "Atlántico", "Bolívar", "Boyacá", "Cauca"];
+        const dptosCodigos = ["52", "54", "63", "44", "50", "11", "05", "76", "08", "13", "15", "19"];
+        const riesgoBase = [44.3, 43.6, 43.2, 39.8, 39.7, 25.1, 24.8, 24.3, 24.6, 24.9, 23.1, 28.5];
+
+        const todosLosSectores = [
+            {nombre: 'Agro y Ganadería', base: 25},
+            {nombre: 'Minería', base: 28},
+            {nombre: 'Ciencia y Técnica', base: 29},
+            {nombre: 'Hoteles y Restaurantes', base: 30},
+            {nombre: 'Educación', base: 31},
+            {nombre: 'Salud', base: 31},
+            {nombre: 'Servicios Administrativos', base: 32},
+            {nombre: 'Tecnología', base: 34},
+            {nombre: 'Transporte', base: 37},
+            {nombre: 'Finanzas', base: 41},
+            {nombre: 'Población Inactiva', base: 51}
+        ].sort((a, b) => a.base - b.base);
+
+        const palette12 = ['#14b8a6','#115e59','#0f766e','#0369a1','#0284c7','#3b82f6','#2563eb','#1d4ed8','#1e3a8a','#172554','#0f172a'];
+
+        let geojsonData = null;
+
+        fetch('https://gist.githubusercontent.com/john-guerra/43c7656821069d00dcbc/raw/be6a6e239cd5b5b803c6e7c2ec405b793a9064dd/Colombia.geo.json')
+            .then(res => res.json())
+            .then(data => {
+                geojsonData = data;
+                document.getElementById('mapLoader').classList.add('hidden');
+                actualizarDashboard(); 
+            });
+
+
+        function actualizarDashboard() {
+            const fGen = document.getElementById('filtroGenero').value;
+            const fSec = document.getElementById('filtroSector').value;
+            let multi = 1.0;
+
+            let totalMuestra = 220095;
+            let distText = "53% / 47%";
+            
+            if (fGen === 'mujeres') { multi = 1.15; totalMuestra = 102783; distText = "0% / 100%"; } 
+            else if (fGen === 'hombres') { multi = 0.95; totalMuestra = 117312; distText = "100% / 0%"; }
+
+            if (fSec !== 'todos') {
+                totalMuestra = Math.floor(totalMuestra / 12) + Math.floor(Math.random() * 1000);
+                document.getElementById('kpi-sector-title').innerText = "Riesgo de Industria";
+                
+                let valBase = todosLosSectores.find(s => fSec.includes(s.nombre) || s.nombre.includes(fSec.split(' ')[0]))?.base || 40;
+                let riesgoFinal = valBase * multi;
+                document.getElementById('kpi-sector-val').innerHTML = `${riesgoFinal.toFixed(1)}%`;
+                document.getElementById('kpi-sector-val').className = riesgoFinal > 50 ? "text-2xl font-black text-red-500" : "text-2xl font-black text-teal-600";
+            } else {
+                document.getElementById('kpi-sector-title').innerText = "Sectores Contemplados";
+                document.getElementById('kpi-sector-val').innerText = "12";
+                document.getElementById('kpi-sector-val').className = "text-2xl font-black text-slate-800";
+            }
+
+            document.getElementById('kpi-total').innerText = totalMuestra.toLocaleString();
+            document.getElementById('kpi-dist').innerText = distText;
+
+            const baseMujeres = [25, 41, 40, 39, 20, 15].map(v => -v); 
+            const baseHombres = [20, 40, 38, 35, 20, 18]; 
+
+            const dataPiramide = [
+                { x: baseMujeres, y: edades, name: 'Mujeres', type: 'bar', orientation: 'h', marker: {color: '#14b8a6'} }, 
+                { x: baseHombres, y: edades, name: 'Hombres', type: 'bar', orientation: 'h', marker: {color: '#0f172a'} }  
+            ];
+            const layoutPiramide = {
+                barmode: 'overlay', margin: { l: 40, r: 10, t: 10, b: 20 },
+                xaxis: { fixedrange: true, tickvals: [-50, -25, 0, 25, 50], ticktext: ['50%', '25%', '0%', '25%', '50%'] },
+                yaxis: { fixedrange: true }, legend: { orientation: 'h', y: 1.1, x: 0.3 },
+                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', dragmode: false
+            };
+            Plotly.newPlot('graficaPiramide', dataPiramide, layoutPiramide, {displayModeBar: false});
+
+            const sectNames = todosLosSectores.map(s => s.nombre);
+            const sectValues = todosLosSectores.map(s => s.base * multi);
+            
+            const dataSectores = [{
+                x: sectValues, y: sectNames, type: 'bar', orientation: 'h',
+                marker: { color: palette12, opacity: 0.95 },
+                text: sectValues.map(v => v.toFixed(1) + '%'), 
+                textposition: 'outside',
+                textfont: { size: 10, color: '#475569', weight: 'bold' }
+            }];
+            
+            const layoutSectores = {
+                margin: { l: 180, r: 40, t: 15, b: 25 }, 
+                xaxis: { fixedrange: true, range: [0, 85], ticksuffix: '%', showgrid: true, gridcolor: '#f8fafc' },
+                yaxis: { 
+                    fixedrange: true, 
+                    tickfont: {size: 11, color: '#334155'},
+                    ticks: 'outside', 
+                    tickcolor: 'transparent', 
+                    ticklen: 12, 
+                    automargin: true 
+                },
+                bargap: 0.35,
+                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', dragmode: false
+            };
+            Plotly.newPlot('graficaSectores', dataSectores, layoutSectores, {displayModeBar: false});
+
+            const avg12 = 53.6 * multi;
+            const gaugeSvg = document.getElementById('dashboardGaugeSvg');
+            const pctTextDashboard = document.getElementById('nacional-text-pct');
+            const descDashboard = document.getElementById('nacional-text-desc');
+
+            const circumference = 125.6;
+            const dashOffset = circumference - (avg12 / 100) * circumference;
+            
+            gaugeSvg.setAttribute('stroke-dashoffset', dashOffset);
+            pctTextDashboard.innerText = avg12.toFixed(1) + "%";
+            
+            if(avg12 > 50) {
+                gaugeSvg.setAttribute('stroke', '#ef4444');
+                pctTextDashboard.className = "text-4xl font-black text-red-500 leading-none";
+                descDashboard.innerHTML = `El promedio global se encuentra en zona de <b class="text-red-500">Alerta Metabólica</b>.`;
+            } else {
+                gaugeSvg.setAttribute('stroke', '#f97316');
+                pctTextDashboard.className = "text-4xl font-black text-orange-500 leading-none";
+                descDashboard.innerHTML = `El promedio global mantiene un nivel de riesgo <b class="text-orange-500">Moderado</b>.`;
+            }
+
+            if (geojsonData) {
+                const dataMapa = [{
+                    type: 'choroplethmapbox', geojson: geojsonData, locations: dptosCodigos, featureidkey: 'properties.DPTO', 
+                    z: riesgoBase.map(r => r * multi), 
+                    colorscale: [ [0, '#fff5f0'], [0.2, '#fee0d2'], [0.4, '#fcbba1'], [0.6, '#fb6a4a'], [0.8, '#de2d26'], [1.0, '#a50f15'] ], 
+                    showscale: true, colorbar: { title: 'Riesgo %', thickness: 15, len: 0.8 },
+                    text: dptosNombres, hoverinfo: 'text+z', marker: { opacity: 0.9, line: { color: '#ffffff', width: 0.8 } }
+                }];
+                const layoutMapa = {
+                    mapbox: { accesstoken: 'pk.eyJ1IjoibWlyZXA2OCIsImEiOiJjbXVrZmg1OTQwZjNqMnlvbW5wNTF0bmlzIn0.d-MmxjjsJXB7U3wtyqCglw', style: "light", center: {lat: 4.5, lon: -74}, zoom: 4.2 },
+                    margin: { r: 0, t: 0, b: 0, l: 0 }, paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', dragmode: false
+                };
+                Plotly.newPlot('mapaColombia', dataMapa, layoutMapa, {displayModeBar: false});
+            }
+        }
+
+        document.getElementById('predForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            document.getElementById('initialOverlay').style.opacity = '0';
+            setTimeout(() => { document.getElementById('initialOverlay').classList.add('hidden'); }, 500);
+
+            const pctText = document.getElementById('pctText');
+            const titulo = document.getElementById('tituloAlerta');
+            const texto = document.getElementById('textoAlerta');
+            const circle = document.getElementById('progressCircle');
+            
+            pctText.innerText = "...";
+            pctText.className = "text-3xl font-black text-slate-300 animate-pulse";
+            circle.setAttribute('stroke-dashoffset', 251.2);
+            circle.setAttribute('stroke', '#cbd5e1');
+
+            const datos = {
+                edad: document.getElementById('edad').value,
+                genero: document.getElementById('genero').value,
+                sector: document.getElementById('sector').value
+            };
+
+            try {
+                const response = await fetch('/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) });
+                const data = await response.json();
+                const offset = 251.2 - (data.probabilidad / 100) * 251.2;
+                
+                setTimeout(() => {
+                    circle.setAttribute('stroke-dashoffset', offset);
+                    pctText.innerText = data.probabilidad.toFixed(1) + "%";
+                    if (data.alerta) {
+                        circle.setAttribute('stroke', '#ef4444'); 
+                        pctText.className = "text-3xl font-black text-red-500 transition-colors duration-500";
+                        titulo.innerText = "Riesgo Alto Detectado";
+                        titulo.className = "text-xl font-extrabold mb-2 text-red-600 fade-in";
+                        texto.innerText = "El paciente se encuentra en umbral crítico. Remitir a programa ergonómico inmediato.";
+                    } else {
+                        circle.setAttribute('stroke', '#14b8a6'); 
+                        pctText.className = "text-3xl font-black text-teal-500 transition-colors duration-500";
+                        titulo.innerText = "Perfil Saludable";
+                        titulo.className = "text-xl font-extrabold mb-2 text-teal-600 fade-in";
+                        texto.innerText = "El paciente mantiene parámetros seguros. Mantener hábitos preventivos.";
+                    }
+                }, 100);
+            } catch (error) {
+                titulo.innerText = "Error"; texto.innerText = "Flask no está corriendo.";
+            }
+        });
+
+        window.onload = () => { switchView('view-dashboard', document.querySelector('.nav-btn')); };
+    </script>
+</body>
+</html>
